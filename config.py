@@ -1,4 +1,3 @@
-
 import json
 import os
 from dataclasses import dataclass, asdict
@@ -17,7 +16,7 @@ class ConfigManager:
     def __init__(self):
         self.config_file = "server_configs.json"
         self.configs = self._load_configs()
-    
+
     def _load_configs(self):
         """Cargar configuraciones desde archivo"""
         if os.path.exists(self.config_file):
@@ -28,7 +27,7 @@ class ConfigManager:
             except Exception as e:
                 print(f"Error cargando configuraciones: {e}")
         return {}
-    
+
     def _save_configs(self):
         """Guardar configuraciones al archivo"""
         try:
@@ -37,19 +36,24 @@ class ConfigManager:
                 json.dump(data, f, indent=4, ensure_ascii=False)
         except Exception as e:
             print(f"Error guardando configuraciones: {e}")
-    
+
     def get_config(self, guild_id: str) -> ServerConfig:
         """Obtener configuración de un servidor"""
         if guild_id not in self.configs:
             self.configs[guild_id] = ServerConfig()
             self._save_configs()
         return self.configs[guild_id]
-    
+
     def update_config(self, guild_id: str, **kwargs):
         """Actualizar configuración de un servidor"""
         config = self.get_config(guild_id)
         for key, value in kwargs.items():
             if hasattr(config, key):
                 setattr(config, key, value)
+        self.configs[guild_id] = config
+        self._save_configs()
+
+    def save_config(self, guild_id: str, config: ServerConfig):
+        """Guardar configuración específica de un servidor"""
         self.configs[guild_id] = config
         self._save_configs()

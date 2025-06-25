@@ -158,5 +158,4 @@ class BotDatabase:
         return {
             "server_messages": server.get("message_count", 0) if server else 0,
             "active_users": active_users
-        }ctive_users
         }
