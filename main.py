@@ -52,14 +52,14 @@ async def on_ready():
 
     ascii_art = """
     \033[1;35m
-    
+
 ███████╗██████╗ ███████╗██╗  ██╗████████╗██████╗ ██╗   ██╗███╗   ███╗
 ██╔════╝██╔══██╗██╔════╝██║ ██╔╝╚══██╔══╝██╔══██╗██║   ██║████╗ ████║
 ███████╗██████╔╝█████╗  █████╔╝    ██║   ██████╔╝██║   ██║██╔████╔██║
 ╚════██║██╔═══╝ ██╔══╝  ██╔═██╗    ██║   ██╔══██╗██║   ██║██║╚██╔╝██║
 ███████║██║     ███████╗██║  ██╗   ██║   ██║  ██║╚██████╔╝██║ ╚═╝ ██║
 ╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚═╝     ╚═╝
-                                                                     
+
 \033[0m
     """
 
@@ -73,11 +73,11 @@ async def on_ready():
 async def reset(ctx):
     global message_history
     user_id = ctx.author.id
-    
+
     # Limpiar caché local
     if user_id in message_history:
         del message_history[user_id]
-    
+
     # Limpiar base de datos
     if db:
         try:
@@ -104,11 +104,11 @@ async def stats(ctx):
     if not db:
         await ctx.send("❌ Base de datos no disponible")
         return
-    
+
     try:
         global_stats = db.get_global_stats()
         user_stats = db.get_user_stats(ctx.author.id)
-        
+
         embed = Embed(title="📊 Estadísticas", color=0x00ff00)
         embed.add_field(name="🌍 Global", 
                        value=f"Conversaciones: {global_stats['total_conversations']}\n"
@@ -119,19 +119,19 @@ async def stats(ctx):
                        value=f"Mensajes: {user_stats['message_count']}\n"
                              f"Última actividad: {user_stats['last_active'].strftime('%d/%m/%Y') if user_stats['last_active'] else 'N/A'}", 
                        inline=True)
-        
+
         if ctx.guild:
             server_stats = db.get_server_stats(ctx.guild.id)
             embed.add_field(name="🏠 Este servidor", 
                            value=f"Mensajes: {server_stats['server_messages']}\n"
                                  f"Usuarios activos: {server_stats['active_users']}", 
                            inline=True)
-        
+
         await ctx.send(embed=embed)
     except Exception as e:
         await ctx.send(f"❌ Error obteniendo estadísticas: {e}")
 
-    
+
 def create_chatbot_channels_file():
     if not os.path.exists('chatbot_channels.json'):
         with open('chatbot_channels.json', 'w') as file:
@@ -227,7 +227,7 @@ async def on_message(message):
                     db.update_user_stats(message.author.id, message.guild.id if message.guild else None)
                     if message.guild:
                         db.update_server_stats(message.guild.id)
-                
+
                 #Check if history is disabled just send response
                 if(MAX_HISTORY == 0):
                     response_text = await generate_response_with_text(cleaned_text)
@@ -239,7 +239,7 @@ async def on_message(message):
                             print(f"Error guardando en DB: {e}")
                     await split_and_send_messages(message, response_text, 1700)
                     return;
-                
+
                 # Obtener historial (primero de DB, luego caché)
                 if db:
                     try:
@@ -248,7 +248,7 @@ async def on_message(message):
                             response_text = await generate_response_with_text(formatted_history + "\n\n" + cleaned_text)
                         else:
                             response_text = await generate_response_with_text(cleaned_text)
-                        
+
                         # Guardar conversación en DB
                         db.save_message(message.author.id, cleaned_text, response_text, message.guild.id if message.guild else None)
                     except Exception as e:
@@ -262,11 +262,11 @@ async def on_message(message):
                     update_message_history(message.author.id, cleaned_text)
                     response_text = await generate_response_with_text(get_formatted_message_history(message.author.id))
                     update_message_history(message.author.id, response_text)
-                
+
                 await split_and_send_messages(message, response_text, 1700)
 
 
-    
+
 
 #ry-------------------------------------------------
 
@@ -361,37 +361,37 @@ async def server_info(ctx):
     if not ctx.guild:
         await ctx.send("❌ Este comando solo funciona en servidores.")
         return
-    
+
     guild = ctx.guild
     embed = Embed(title=f"📋 Información de {guild.name}", color=0x7289da)
     embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
-    
+
     embed.add_field(name="👑 Propietario", value=guild.owner.mention if guild.owner else "Desconocido", inline=True)
     embed.add_field(name="👥 Miembros", value=guild.member_count, inline=True)
     embed.add_field(name="💬 Canales", value=len(guild.channels), inline=True)
     embed.add_field(name="🎭 Roles", value=len(guild.roles), inline=True)
     embed.add_field(name="📅 Creado", value=guild.created_at.strftime("%d/%m/%Y"), inline=True)
     embed.add_field(name="🆔 ID", value=guild.id, inline=True)
-    
+
     await ctx.send(embed=embed)
 
 @bot.hybrid_command(name="userinfo", description="Información de un usuario")
 async def user_info(ctx, member: discord.Member = None):
     if member is None:
         member = ctx.author
-    
+
     embed = Embed(title=f"👤 Información de {member.display_name}", color=member.color)
     embed.set_thumbnail(url=member.avatar.url if member.avatar else member.default_avatar.url)
-    
+
     embed.add_field(name="🏷️ Nombre completo", value=str(member), inline=True)
     embed.add_field(name="🆔 ID", value=member.id, inline=True)
     embed.add_field(name="📅 Cuenta creada", value=member.created_at.strftime("%d/%m/%Y"), inline=True)
-    
+
     if ctx.guild and member in ctx.guild.members:
         embed.add_field(name="📥 Se unió al servidor", value=member.joined_at.strftime("%d/%m/%Y"), inline=True)
         embed.add_field(name="🎭 Roles", value=f"{len(member.roles)-1} roles", inline=True)
         embed.add_field(name="🔝 Rol más alto", value=member.top_role.mention, inline=True)
-    
+
     await ctx.send(embed=embed)
 
 #---------------------------------------------Run Bot-------------------------------------------------
@@ -401,3 +401,11 @@ if __name__ == "__main__":
         bot.run(DISCORD_BOT_TOKEN)
     except Exception as e:
         print(f"Error ejecutando el bot: {e}")
+def clean_discord_message(message_content):
+    """Clean Discord message content"""
+    # Remove mentions, channels, and other Discord-specific formatting
+    import re
+    cleaned = re.sub(r'<@[!&]?(\d+)>', '', message_content)
+    cleaned = re.sub(r'<#(\d+)>', '', cleaned)
+    cleaned = re.sub(r'<:\w+:(\d+)>', '', cleaned)
+    return cleaned.strip()

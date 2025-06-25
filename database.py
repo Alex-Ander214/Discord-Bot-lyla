@@ -19,6 +19,10 @@ class BotDatabase:
             self.client.admin.command('ping')
             self.db = self.client.lyla_bot
             print("✅ Conexión a MongoDB exitosa")
+            # Crear índices para mejor rendimiento
+            self.conversations.create_index([("user_id", 1), ("timestamp", -1)])
+            self.users.create_index("user_id")
+            self.servers.create_index("guild_id")
         except Exception as e:
             print(f"❌ Error conectando a MongoDB: {e}")
             self.client = None
