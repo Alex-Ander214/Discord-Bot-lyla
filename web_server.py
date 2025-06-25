@@ -161,7 +161,7 @@ def run_web_server():
     """Run the Flask web server"""
     port = int(os.environ.get('PORT', 5000))
     logger.info(f"Starting web server on port {port}")
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
 
 if __name__ == '__main__':
     # Start bot in a separate thread
