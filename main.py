@@ -19,13 +19,9 @@ GOOGLE_AI_KEY = os.getenv("GOOGLE_AI_KEY")
 DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 MAX_HISTORY = int(os.getenv("MAX_HISTORY"))
 
-#CUSTOM_PERSONALITY = os.getenv("CUSTOM_PERSONALITY") --- this shit is disgusting asf and booring old skill for custom personality fuck it and fuck you if u enable it (gonna update it soon & set chatbo)Esta mierda es repugnante y aburrida, vieja habilidad para la personalidad personalizada, que se joda y que se joda usted si la habilita (pronto la actualizaré y configuraré el chatbot)
-
-
-
-
-
-
+# Configuración de variables de entorno
+if not GOOGLE_AI_KEY or not DISCORD_BOT_TOKEN:
+    raise ValueError("Faltan variables de entorno requeridas: GOOGLE_AI_KEY y DISCORD_BOT_TOKEN")
 
 @bot.event
 async def on_ready():
@@ -64,17 +60,22 @@ async def on_ready():
     print(print_in_color(f"      Enlace de invitación: {invite_link}", "1;36"))
 
 
-# Function to generate response based on custom personality prompts
-
-
-
-
-
 @bot.hybrid_command(name="reset", description="Borra el historial de mensajes del bot")
 async def reset(ctx):
     global message_history
     message_history = {}
     await ctx.send("🤖 El historial de mensajes del bot ha sido borrado.")
+
+@bot.hybrid_command(name="info", description="Información sobre el bot")
+async def info(ctx):
+    embed = Embed(title="🤖 Información de Lyla", color=0x7289da)
+    embed.add_field(name="📊 Servidores", value=len(bot.guilds), inline=True)
+    embed.add_field(name="👥 Usuarios", value=sum(guild.member_count for guild in bot.guilds if guild.member_count), inline=True)
+    embed.add_field(name="🏓 Latencia", value=f"{round(bot.latency * 1000)}ms", inline=True)
+    embed.add_field(name="🔗 Invitar", value="[Añadir a tu servidor](https://discord.com/oauth2/authorize?client_id=1387117751780245655&scope=bot+applications.commands&permissions=0)", inline=False)
+    embed.add_field(name="🆘 Soporte", value="[Servidor de soporte](https://www.discord.gg/gkn2hxfTc7)", inline=False)
+    embed.set_footer(text="Desarrollado por Alex")
+    await ctx.send(embed=embed)
 
     
 def create_chatbot_channels_file():
@@ -187,20 +188,28 @@ async def on_message(message):
 #ry-------------------------------------------------
 
 async def generate_response_with_text(message_text):
-    prompt_parts = [message_text]
-    print("Got textPrompt: " + message_text)
-    response = text_model.generate_content(prompt_parts)
-    if(response._error):
-        return "❌" +  str(response._error)
-    return response.text
+    try:
+        prompt_parts = [message_text]
+        print(f"Procesando texto: {message_text[:100]}...")
+        response = text_model.generate_content(prompt_parts)
+        if hasattr(response, '_error') and response._error:
+            return f"❌ Error: {response._error}"
+        return response.text
+    except Exception as e:
+        print(f"Error generando respuesta de texto: {e}")
+        return "❌ Ocurrió un error al procesar tu mensaje."
 
 async def generate_response_with_image_and_text(image_data, text):
-    image_parts = [{"mime_type": "image/jpeg", "data": image_data}]
-    prompt_parts = [image_parts[0], f"\n{text if text else 'What is this a picture of?'}"]
-    response = image_model.generate_content(prompt_parts)
-    if(response._error):
-        return "❌" +  str(response._error)
-    return response.text
+    try:
+        image_parts = [{"mime_type": "image/jpeg", "data": image_data}]
+        prompt_parts = [image_parts[0], f"\n{text if text else '¿Qué hay en esta imagen?'}"]
+        response = image_model.generate_content(prompt_parts)
+        if hasattr(response, '_error') and response._error:
+            return f"❌ Error: {response._error}"
+        return response.text
+    except Exception as e:
+        print(f"Error procesando imagen: {e}")
+        return "❌ No pude procesar la imagen."
 
 #---------------------------------------------Message History-------------------------------------------------
 def update_message_history(user_id, text):
