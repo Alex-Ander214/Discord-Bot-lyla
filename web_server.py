@@ -189,7 +189,7 @@ def dashboard():
                                     **bot_info)
     except Exception as e:
         logger.error(f"Error in dashboard: {e}")
-        return jsonify({"error": "Dashboard error", "details": str(e)}), 500rror": "Failed to load dashboard"}), 500
+        return jsonify({"error": "Dashboard error", "details": str(e)}), 500
 
 @app.route('/api/conversations/<user_id>')
 def get_user_conversations(user_id):
