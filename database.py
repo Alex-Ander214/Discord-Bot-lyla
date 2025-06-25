@@ -2,15 +2,16 @@
 import os
 import pymongo
 from datetime import datetime
-from dotenv import load_dotenv
-
-load_dotenv()
+from typing import Optional, List, Dict
 
 class BotDatabase:
     def __init__(self):
         self.mongodb_uri = os.getenv("MONGODB_URI")
         if not self.mongodb_uri:
-            raise ValueError("MONGODB_URI no está configurada en las variables de entorno")
+            print("⚠️ MONGODB_URI no configurada, usando modo local")
+            self.client = None
+            self.db = None
+            return
         
         try:
             self.client = pymongo.MongoClient(self.mongodb_uri)
@@ -20,7 +21,9 @@ class BotDatabase:
             print("✅ Conexión a MongoDB exitosa")
         except Exception as e:
             print(f"❌ Error conectando a MongoDB: {e}")
-            raise
+            self.client = None
+            self.db = None
+            return
         
         # Colecciones
         self.conversations = self.db.conversations
@@ -30,6 +33,9 @@ class BotDatabase:
         
     def save_message(self, user_id, message, response, guild_id=None):
         """Guardar conversación en la base de datos"""
+        if not self.db:
+            return None
+            
         conversation = {
             "user_id": str(user_id),
             "guild_id": str(guild_id) if guild_id else None,
@@ -39,8 +45,11 @@ class BotDatabase:
         }
         return self.conversations.insert_one(conversation)
     
-    def get_user_history(self, user_id, limit=None):
+    def get_user_history(self, user_id, limit=10):
         """Obtener historial de conversaciones de un usuario"""
+        if not self.db:
+            return []
+            
         query = {"user_id": str(user_id)}
         cursor = self.conversations.find(query).sort("timestamp", -1)
         
@@ -49,40 +58,46 @@ class BotDatabase:
             
         return list(cursor)
     
-    def get_formatted_history(self, user_id, max_messages):
-        """Obtener historial formateado para el modelo de IA"""
-        history = self.get_user_history(user_id, max_messages)
+    def get_formatted_history(self, user_id, limit=10):
+        """Obtener historial formateado para el modelo AI"""
+        history = self.get_user_history(user_id, limit)
+        if not history:
+            return ""
+            
         formatted = []
-        
-        for conv in reversed(history):  # Más reciente al final
-            formatted.append(conv["message"])
-            formatted.append(conv["response"])
-        
-        return '\n\n'.join(formatted)
+        for conv in reversed(history):  # Orden cronológico
+            formatted.append(f"Usuario: {conv['message']}")
+            formatted.append(f"Asistente: {conv['response']}")
+            
+        return "\n\n".join(formatted)
     
     def clear_user_history(self, user_id):
         """Limpiar historial de un usuario"""
+        if not self.db:
+            return type('obj', (object,), {'deleted_count': 0})()
+            
         return self.conversations.delete_many({"user_id": str(user_id)})
     
     def update_user_stats(self, user_id, guild_id=None):
         """Actualizar estadísticas de usuario"""
-        user_data = {
-            "user_id": str(user_id),
-            "last_active": datetime.now(),
-            "message_count": 1
-        }
-        
-        if guild_id:
-            user_data["guild_id"] = str(guild_id)
-        
+        if not self.db:
+            return
+            
         self.users.update_one(
             {"user_id": str(user_id)},
-            {"$inc": {"message_count": 1}, "$set": {"last_active": datetime.now()}},
+            {
+                "$inc": {"message_count": 1},
+                "$set": {"last_active": datetime.now()},
+                "$addToSet": {"guilds": str(guild_id)} if guild_id else {}
+            },
             upsert=True
         )
     
     def update_server_stats(self, guild_id):
         """Actualizar estadísticas de servidor"""
+        if not self.db:
+            return
+            
         self.servers.update_one(
             {"guild_id": str(guild_id)},
             {
@@ -94,33 +109,49 @@ class BotDatabase:
     
     def get_global_stats(self):
         """Obtener estadísticas globales"""
-        total_conversations = self.conversations.count_documents({})
-        total_users = self.users.count_documents({})
-        total_servers = self.servers.count_documents({})
+        if not self.db:
+            return {
+                "total_conversations": 0,
+                "total_users": 0,
+                "total_servers": 0
+            }
         
-        return {
-            "total_conversations": total_conversations,
-            "total_users": total_users,
-            "total_servers": total_servers
-        }
-    
-    def get_server_stats(self, guild_id):
-        """Obtener estadísticas de un servidor específico"""
-        server_messages = self.conversations.count_documents({"guild_id": str(guild_id)})
-        server_users = self.conversations.distinct("user_id", {"guild_id": str(guild_id)})
-        
-        return {
-            "server_messages": server_messages,
-            "active_users": len(server_users)
-        }
+        try:
+            total_conversations = self.conversations.count_documents({})
+            total_users = self.users.count_documents({})
+            total_servers = self.servers.count_documents({})
+            
+            return {
+                "total_conversations": total_conversations,
+                "total_users": total_users,
+                "total_servers": total_servers
+            }
+        except Exception as e:
+            print(f"Error obteniendo estadísticas globales: {e}")
+            return {"total_conversations": 0, "total_users": 0, "total_servers": 0}
     
     def get_user_stats(self, user_id):
-        """Obtener estadísticas de un usuario específico"""
-        user_data = self.users.find_one({"user_id": str(user_id)})
-        if not user_data:
+        """Obtener estadísticas de usuario específico"""
+        if not self.db:
             return {"message_count": 0, "last_active": None}
+            
+        user = self.users.find_one({"user_id": str(user_id)})
+        if user:
+            return {
+                "message_count": user.get("message_count", 0),
+                "last_active": user.get("last_active")
+            }
+        return {"message_count": 0, "last_active": None}
+    
+    def get_server_stats(self, guild_id):
+        """Obtener estadísticas de servidor específico"""
+        if not self.db:
+            return {"server_messages": 0, "active_users": 0}
+            
+        server = self.servers.find_one({"guild_id": str(guild_id)})
+        active_users = self.users.count_documents({"guilds": str(guild_id)})
         
         return {
-            "message_count": user_data.get("message_count", 0),
-            "last_active": user_data.get("last_active")
+            "server_messages": server.get("message_count", 0) if server else 0,
+            "active_users": active_users
         }

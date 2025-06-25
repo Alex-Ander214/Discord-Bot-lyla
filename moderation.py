@@ -3,102 +3,192 @@ import discord
 from discord.ext import commands
 from datetime import datetime, timedelta
 import asyncio
+from logger import bot_logger
 
 class Moderation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.warns = {}  # Temporal, en producción usar DB
+        self.warnings = {}  # Almacenar advertencias temporalmente
+    
+    @commands.hybrid_command(name="kick", description="Expulsar a un usuario")
+    @commands.has_permissions(kick_members=True)
+    async def kick(self, ctx, member: discord.Member, *, reason="Sin razón especificada"):
+        try:
+            await member.kick(reason=reason)
+            embed = discord.Embed(
+                title="👢 Usuario Expulsado",
+                description=f"{member.mention} ha sido expulsado del servidor.",
+                color=0xff9900
+            )
+            embed.add_field(name="Razón", value=reason, inline=False)
+            embed.add_field(name="Moderador", value=ctx.author.mention, inline=True)
+            await ctx.send(embed=embed)
+            bot_logger.info(f"Usuario {member} expulsado por {ctx.author} - Razón: {reason}")
+        except discord.Forbidden:
+            await ctx.send("❌ No tengo permisos para expulsar a este usuario.")
+        except Exception as e:
+            await ctx.send(f"❌ Error al expulsar usuario: {e}")
+    
+    @commands.hybrid_command(name="ban", description="Banear a un usuario")
+    @commands.has_permissions(ban_members=True)
+    async def ban(self, ctx, member: discord.Member, *, reason="Sin razón especificada"):
+        try:
+            await member.ban(reason=reason)
+            embed = discord.Embed(
+                title="🔨 Usuario Baneado",
+                description=f"{member.mention} ha sido baneado del servidor.",
+                color=0xff0000
+            )
+            embed.add_field(name="Razón", value=reason, inline=False)
+            embed.add_field(name="Moderador", value=ctx.author.mention, inline=True)
+            await ctx.send(embed=embed)
+            bot_logger.info(f"Usuario {member} baneado por {ctx.author} - Razón: {reason}")
+        except discord.Forbidden:
+            await ctx.send("❌ No tengo permisos para banear a este usuario.")
+        except Exception as e:
+            await ctx.send(f"❌ Error al banear usuario: {e}")
+    
+    @commands.hybrid_command(name="unban", description="Desbanear a un usuario")
+    @commands.has_permissions(ban_members=True)
+    async def unban(self, ctx, user_id: int, *, reason="Sin razón especificada"):
+        try:
+            user = await self.bot.fetch_user(user_id)
+            await ctx.guild.unban(user, reason=reason)
+            embed = discord.Embed(
+                title="✅ Usuario Desbaneado",
+                description=f"{user.mention} ha sido desbaneado.",
+                color=0x00ff00
+            )
+            embed.add_field(name="Razón", value=reason, inline=False)
+            embed.add_field(name="Moderador", value=ctx.author.mention, inline=True)
+            await ctx.send(embed=embed)
+            bot_logger.info(f"Usuario {user} desbaneado por {ctx.author} - Razón: {reason}")
+        except discord.NotFound:
+            await ctx.send("❌ Usuario no encontrado o no está baneado.")
+        except Exception as e:
+            await ctx.send(f"❌ Error al desbanear usuario: {e}")
+    
+    @commands.hybrid_command(name="timeout", description="Silenciar temporalmente a un usuario")
+    @commands.has_permissions(moderate_members=True)
+    async def timeout(self, ctx, member: discord.Member, minutes: int, *, reason="Sin razón especificada"):
+        try:
+            if minutes > 10080:  # Máximo 7 días
+                await ctx.send("❌ El tiempo máximo es 10080 minutos (7 días).")
+                return
+            
+            until = discord.utils.utcnow() + timedelta(minutes=minutes)
+            await member.timeout(until, reason=reason)
+            
+            embed = discord.Embed(
+                title="🔇 Usuario Silenciado",
+                description=f"{member.mention} ha sido silenciado por {minutes} minutos.",
+                color=0xffaa00
+            )
+            embed.add_field(name="Razón", value=reason, inline=False)
+            embed.add_field(name="Moderador", value=ctx.author.mention, inline=True)
+            embed.add_field(name="Hasta", value=f"<t:{int(until.timestamp())}:F>", inline=True)
+            await ctx.send(embed=embed)
+            bot_logger.info(f"Usuario {member} silenciado por {ctx.author} - {minutes} minutos")
+        except discord.Forbidden:
+            await ctx.send("❌ No tengo permisos para silenciar a este usuario.")
+        except Exception as e:
+            await ctx.send(f"❌ Error al silenciar usuario: {e}")
     
     @commands.hybrid_command(name="warn", description="Advertir a un usuario")
     @commands.has_permissions(manage_messages=True)
-    async def warn_user(self, ctx, member: discord.Member, *, reason="No especificado"):
+    async def warn(self, ctx, member: discord.Member, *, reason="Sin razón especificada"):
         guild_id = str(ctx.guild.id)
         user_id = str(member.id)
         
-        if guild_id not in self.warns:
-            self.warns[guild_id] = {}
-        if user_id not in self.warns[guild_id]:
-            self.warns[guild_id][user_id] = []
+        if guild_id not in self.warnings:
+            self.warnings[guild_id] = {}
+        if user_id not in self.warnings[guild_id]:
+            self.warnings[guild_id][user_id] = []
         
-        warn_data = {
+        self.warnings[guild_id][user_id].append({
             "reason": reason,
-            "moderator": ctx.author.name,
-            "timestamp": datetime.now().isoformat()
-        }
+            "moderator": str(ctx.author.id),
+            "timestamp": datetime.now()
+        })
         
-        self.warns[guild_id][user_id].append(warn_data)
+        warning_count = len(self.warnings[guild_id][user_id])
         
         embed = discord.Embed(
             title="⚠️ Usuario Advertido",
-            description=f"{member.mention} ha sido advertido",
-            color=0xffaa00
+            description=f"{member.mention} ha recibido una advertencia.",
+            color=0xffff00
         )
         embed.add_field(name="Razón", value=reason, inline=False)
         embed.add_field(name="Moderador", value=ctx.author.mention, inline=True)
-        embed.add_field(name="Advertencias totales", 
-                       value=len(self.warns[guild_id][user_id]), inline=True)
+        embed.add_field(name="Advertencias totales", value=f"{warning_count}/3", inline=True)
         
         await ctx.send(embed=embed)
         
-        try:
-            await member.send(f"Has sido advertido en **{ctx.guild.name}**\nRazón: {reason}")
-        except:
-            pass
+        # Auto-acción si alcanza 3 advertencias
+        if warning_count >= 3:
+            try:
+                await member.timeout(discord.utils.utcnow() + timedelta(hours=1), 
+                                   reason="3 advertencias alcanzadas - Timeout automático")
+                await ctx.send(f"🔇 {member.mention} ha sido silenciado automáticamente por acumular 3 advertencias.")
+            except:
+                pass
     
     @commands.hybrid_command(name="warnings", description="Ver advertencias de un usuario")
-    async def check_warnings(self, ctx, member: discord.Member = None):
+    async def warnings(self, ctx, member: discord.Member = None):
         if member is None:
             member = ctx.author
         
         guild_id = str(ctx.guild.id)
         user_id = str(member.id)
         
-        user_warns = self.warns.get(guild_id, {}).get(user_id, [])
-        
-        if not user_warns:
+        if guild_id not in self.warnings or user_id not in self.warnings[guild_id]:
             await ctx.send(f"{member.display_name} no tiene advertencias.")
             return
         
+        user_warnings = self.warnings[guild_id][user_id]
+        
         embed = discord.Embed(
             title=f"⚠️ Advertencias de {member.display_name}",
-            color=0xff0000
+            description=f"Total: {len(user_warnings)} advertencias",
+            color=0xffff00
         )
         
-        for i, warn in enumerate(user_warns[-5:], 1):  # Últimas 5
+        for i, warning in enumerate(user_warnings[-5:], 1):  # Últimas 5
+            moderator = ctx.guild.get_member(int(warning["moderator"]))
+            mod_name = moderator.display_name if moderator else "Moderador desconocido"
+            
             embed.add_field(
                 name=f"Advertencia #{i}",
-                value=f"**Razón:** {warn['reason']}\n**Moderador:** {warn['moderator']}\n**Fecha:** {warn['timestamp'][:10]}",
+                value=f"**Razón:** {warning['reason']}\n"
+                      f"**Moderador:** {mod_name}\n"
+                      f"**Fecha:** {warning['timestamp'].strftime('%d/%m/%Y %H:%M')}",
                 inline=False
             )
         
         await ctx.send(embed=embed)
     
-    @commands.hybrid_command(name="mute", description="Silenciar a un usuario")
+    @commands.hybrid_command(name="clear", description="Limpiar mensajes del canal")
     @commands.has_permissions(manage_messages=True)
-    async def mute_user(self, ctx, member: discord.Member, duration: int = 10, *, reason="No especificado"):
+    async def clear(self, ctx, amount: int = 10):
+        if amount > 100:
+            await ctx.send("❌ No puedo borrar más de 100 mensajes a la vez.")
+            return
+        
         try:
-            await member.timeout(timedelta(minutes=duration), reason=reason)
-            
+            deleted = await ctx.channel.purge(limit=amount + 1)  # +1 para incluir el comando
             embed = discord.Embed(
-                title="🔇 Usuario Silenciado",
-                description=f"{member.mention} ha sido silenciado por {duration} minutos",
-                color=0xff0000
+                title="🧹 Mensajes Eliminados",
+                description=f"Se eliminaron {len(deleted)-1} mensajes.",
+                color=0x00ff00
             )
-            embed.add_field(name="Razón", value=reason, inline=False)
-            embed.add_field(name="Moderador", value=ctx.author.mention, inline=True)
-            
-            await ctx.send(embed=embed)
+            msg = await ctx.send(embed=embed)
+            await asyncio.sleep(3)
+            await msg.delete()
+            bot_logger.info(f"{ctx.author} eliminó {len(deleted)-1} mensajes en {ctx.channel}")
+        except discord.Forbidden:
+            await ctx.send("❌ No tengo permisos para eliminar mensajes.")
         except Exception as e:
-            await ctx.send(f"❌ Error al silenciar: {e}")
-    
-    @commands.hybrid_command(name="unmute", description="Quitar silencio a un usuario")
-    @commands.has_permissions(manage_messages=True)
-    async def unmute_user(self, ctx, member: discord.Member):
-        try:
-            await member.timeout(None)
-            await ctx.send(f"🔊 {member.mention} ya no está silenciado.")
-        except Exception as e:
-            await ctx.send(f"❌ Error al quitar silencio: {e}")
+            await ctx.send(f"❌ Error eliminando mensajes: {e}")
 
 async def setup(bot):
     await bot.add_cog(Moderation(bot))
