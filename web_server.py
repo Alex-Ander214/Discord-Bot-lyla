@@ -167,11 +167,26 @@ def dashboard():
         </html>
         """
         
+        # Información adicional del bot
+        bot_info = {
+            "bot_online": bot.is_ready(),
+            "latency": round(bot.latency * 1000, 2) if bot.is_ready() else 0,
+            "uptime": "24/7",
+            "servers": [
+                {
+                    "name": guild.name,
+                    "members": guild.member_count,
+                    "channels": len(guild.channels)
+                } for guild in bot.guilds[:10]  # Primeros 10 servidores
+            ] if bot.is_ready() else []
+        }
+        
         return render_template_string(dashboard_html, 
                                     total_conversations=global_stats['total_conversations'],
                                     total_users=global_stats['total_users'],
                                     total_servers=global_stats['total_servers'],
-                                    bot_status="🟢 Online" if bot.is_ready() else "🟡 Connecting")
+                                    bot_status="Online" if bot.is_ready() else "Connecting",
+                                    **bot_info)
     except Exception as e:
         logger.error(f"Error in dashboard: {e}")
         return jsonify({"error": "Failed to load dashboard"}), 500

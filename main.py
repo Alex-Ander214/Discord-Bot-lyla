@@ -345,6 +345,8 @@ async def load_extensions():
     try:
         await bot.load_extension("moderation")
         await bot.load_extension("entertainment")
+        await bot.load_extension("admin_commands")
+        await bot.load_extension("events")
         print("✅ Extensiones cargadas correctamente")
     except Exception as e:
         print(f"❌ Error cargando extensiones: {e}")
