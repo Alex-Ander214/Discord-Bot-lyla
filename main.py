@@ -260,4 +260,7 @@ def clean_discord_message(input_string):
 #---------------------------------------------Run Bot-------------------------------------------------
 # Solo ejecutar el bot si este archivo es ejecutado directamente
 if __name__ == "__main__":
-    bot.run(DISCORD_BOT_TOKEN)
+    try:
+        bot.run(DISCORD_BOT_TOKEN)
+    except Exception as e:
+        print(f"Error ejecutando el bot: {e}")
