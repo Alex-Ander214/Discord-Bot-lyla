@@ -1,16 +1,22 @@
+
 import json
 import os
 from dataclasses import dataclass, asdict
-from typing import Optional
 
 @dataclass
 class ServerConfig:
+    """Configuración por servidor"""
     prefix: str = "/"
-    welcome_channel: Optional[str] = None
-    log_channel: Optional[str] = None
-    automod_enabled: bool = False
-    auto_role: Optional[str] = None
-    max_warnings: int = 3
+    moderation_enabled: bool = True
+    logging_enabled: bool = True
+    welcome_channel: str = None
+    mod_channel: str = None
+    auto_role: str = None
+    banned_words: list = None
+    
+    def __post_init__(self):
+        if self.banned_words is None:
+            self.banned_words = []
 
 class ConfigManager:
     def __init__(self):
@@ -50,10 +56,5 @@ class ConfigManager:
         for key, value in kwargs.items():
             if hasattr(config, key):
                 setattr(config, key, value)
-        self.configs[guild_id] = config
         self._save_configs()
-
-    def save_config(self, guild_id: str, config: ServerConfig):
-        """Guardar configuración específica de un servidor"""
-        self.configs[guild_id] = config
-        self._save_configs()
+        return config

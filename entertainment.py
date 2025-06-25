@@ -1,4 +1,3 @@
-
 import discord
 from discord.ext import commands
 import random
@@ -8,87 +7,81 @@ import json
 class Entertainment(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-    
-    @commands.hybrid_command(name="roll", description="Lanzar un dado")
-    async def roll(self, ctx, sides: int = 6):
-        if sides < 2 or sides > 100:
-            await ctx.send("❌ El dado debe tener entre 2 y 100 caras.")
-            return
-        
-        result = random.randint(1, sides)
+
+    @commands.hybrid_command(name="dado", description="Lanza un dado de 6 caras")
+    async def roll_dice(self, ctx):
+        """Lanza un dado"""
+        result = random.randint(1, 6)
         embed = discord.Embed(
             title="🎲 Lanzamiento de Dado",
-            description=f"**Resultado:** {result} (d{sides})",
+            description=f"Has obtenido: **{result}**",
             color=0x00ff00
         )
         await ctx.send(embed=embed)
-    
-    @commands.hybrid_command(name="coinflip", description="Lanzar una moneda")
-    async def coinflip(self, ctx):
+
+    @commands.hybrid_command(name="moneda", description="Lanza una moneda")
+    async def flip_coin(self, ctx):
+        """Lanza una moneda"""
         result = random.choice(["Cara", "Cruz"])
         emoji = "🪙" if result == "Cara" else "🔄"
-        
         embed = discord.Embed(
             title=f"{emoji} Lanzamiento de Moneda",
-            description=f"**Resultado:** {result}",
+            description=f"Resultado: **{result}**",
             color=0xffd700
         )
         await ctx.send(embed=embed)
-    
-    @commands.hybrid_command(name="8ball", description="Pregunta a la bola 8")
-    async def eight_ball(self, ctx, *, question: str):
-        responses = [
-            "Es cierto", "Es decididamente así", "Sin duda",
-            "Sí, definitivamente", "Puedes confiar en ello",
-            "Como yo lo veo, sí", "Muy probable", "Perspectiva buena",
-            "Las señales apuntan que sí", "Sí", "Respuesta confusa, intenta de nuevo",
-            "Pregunta de nuevo más tarde", "Mejor no te lo digo ahora",
-            "No puedo predecir ahora", "Concéntrate y pregunta de nuevo",
-            "No cuentes con ello", "Mi respuesta es no",
-            "Mis fuentes dicen que no", "Perspectiva no muy buena", "Muy dudoso"
+
+    @commands.hybrid_command(name="8ball", description="Pregunta a la bola mágica")
+    async def eight_ball(self, ctx, *, pregunta: str):
+        """Bola mágica 8"""
+        respuestas = [
+            "Es cierto", "Definitivamente sí", "Sin duda", "Sí, definitivamente",
+            "Puedes confiar en ello", "Como yo lo veo, sí", "Lo más probable",
+            "Las perspectivas son buenas", "Sí", "Las señales apuntan a que sí",
+            "Respuesta confusa, intenta de nuevo", "Pregunta de nuevo más tarde",
+            "Mejor no decírtelo ahora", "No puedo predecirlo ahora",
+            "Concéntrate y pregunta de nuevo", "No cuentes con ello",
+            "Mi respuesta es no", "Mis fuentes dicen que no",
+            "Las perspectivas no son tan buenas", "Muy dudoso"
         ]
-        
-        response = random.choice(responses)
-        
+        respuesta = random.choice(respuestas)
         embed = discord.Embed(
-            title="🎱 Bola 8 Mágica",
+            title="🎱 Bola Mágica 8",
+            description=f"**Pregunta:** {pregunta}\n**Respuesta:** {respuesta}",
             color=0x800080
         )
-        embed.add_field(name="Pregunta", value=question, inline=False)
-        embed.add_field(name="Respuesta", value=response, inline=False)
         await ctx.send(embed=embed)
-    
-    @commands.hybrid_command(name="joke", description="Contar un chiste")
+
+    @commands.hybrid_command(name="chiste", description="Cuenta un chiste aleatorio")
     async def joke(self, ctx):
-        jokes = [
-            "¿Por qué los programadores prefieren el modo oscuro? Porque la luz atrae bugs.",
-            "¿Cuál es el colmo de un programador? Que su mujer le diga que tiene un bug.",
-            "¿Por qué los programadores no pueden contar hasta 31 en octubre? Porque después del 30 viene el 00.",
-            "¿Cómo se llama un programador que no programa? Comentario.",
-            "¿Qué le dice un bit al otro? Nos vemos en el bus.",
-            "¿Por qué los programadores odian la naturaleza? Porque tiene demasiados bugs.",
-            "¿Cuántos programadores se necesitan para cambiar una bombilla? Ninguno, es un problema de hardware."
+        """Cuenta un chiste"""
+        chistes = [
+            "¿Por qué los pájaros vuelan hacia el sur en invierno? Porque es muy lejos para caminar.",
+            "¿Qué le dice un iguana a su hermana gemela? Somos iguanitas.",
+            "¿Cómo se llama el campeón de buceo japonés? Tokofondo.",
+            "¿Qué hace una abeja en el gimnasio? ¡Zum-ba!",
+            "¿Por qué los peces no pagan impuestos? Porque viven en el agua y no en la tierra.",
+            "¿Cómo se despiden los químicos? Ácido un placer.",
+            "¿Qué le dice una impresora a otra? Esa hoja es tuya o es impresión mía.",
         ]
-        
-        joke = random.choice(jokes)
-        
+        chiste = random.choice(chistes)
         embed = discord.Embed(
             title="😂 Chiste del Día",
-            description=joke,
+            description=chiste,
             color=0xffff00
         )
         await ctx.send(embed=embed)
-    
+
     @commands.hybrid_command(name="choose", description="Elegir entre opciones")
     async def choose(self, ctx, *, options: str):
         choices = [choice.strip() for choice in options.split(",")]
-        
+
         if len(choices) < 2:
             await ctx.send("❌ Necesitas al menos 2 opciones separadas por comas.")
             return
-        
+
         choice = random.choice(choices)
-        
+
         embed = discord.Embed(
             title="🤔 Elección Aleatoria",
             description=f"**He elegido:** {choice}",
@@ -96,7 +89,7 @@ class Entertainment(commands.Cog):
         )
         embed.add_field(name="Opciones", value=", ".join(choices), inline=False)
         await ctx.send(embed=embed)
-    
+
     @commands.hybrid_command(name="meme", description="Obtener un meme aleatorio")
     async def meme(self, ctx):
         try:
@@ -104,14 +97,14 @@ class Entertainment(commands.Cog):
                 async with session.get("https://meme-api.com/gimme") as resp:
                     if resp.status == 200:
                         data = await resp.json()
-                        
+
                         embed = discord.Embed(
                             title=data.get("title", "Meme Aleatorio"),
                             color=0xff69b4
                         )
                         embed.set_image(url=data.get("url"))
                         embed.set_footer(text=f"👍 {data.get('ups', 0)} upvotes")
-                        
+
                         await ctx.send(embed=embed)
                     else:
                         await ctx.send("❌ No pude obtener un meme en este momento.")
