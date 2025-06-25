@@ -1,3 +1,4 @@
+
 from flask import Flask, jsonify, render_template_string
 import threading
 import os
@@ -54,7 +55,7 @@ def stats():
                 "user_count": 0,
                 "bot_name": "Lyla"
             })
-
+        
         return jsonify({
             "guild_count": len(bot.guilds),
             "user_count": sum(guild.member_count for guild in bot.guilds if guild.member_count),
@@ -71,10 +72,10 @@ def dashboard():
     """Dashboard web con estadísticas"""
     if not db:
         return jsonify({"error": "Database not available"}), 503
-
+    
     try:
         global_stats = db.get_global_stats()
-
+        
         dashboard_html = """
         <!DOCTYPE html>
         <html>
@@ -111,7 +112,7 @@ def dashboard():
                     <h1>🤖 Lyla Bot Dashboard</h1>
                     <p>Panel de control y estadísticas en tiempo real</p>
                 </div>
-
+                
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon">💬</div>
@@ -144,7 +145,7 @@ def dashboard():
                         <div class="stat-label">Tiempo Activo</div>
                     </div>
                 </div>
-
+                
                 <div class="server-list">
                     <h2 style="color: #f0f6fc; margin-bottom: 20px;">🌐 Servidores Activos</h2>
                     {% for server in servers %}
@@ -154,10 +155,10 @@ def dashboard():
                     </div>
                     {% endfor %}
                 </div>
-
+                
                 <button class="refresh-btn" onclick="location.reload()">🔄 Actualizar Datos</button>
             </div>
-
+            
             <script>
                 // Auto-refresh cada 30 segundos
                 setTimeout(() => location.reload(), 30000);
@@ -165,37 +166,22 @@ def dashboard():
         </body>
         </html>
         """
-
-        # Información adicional del bot
-        bot_info = {
-            "bot_online": bot.is_ready(),
-            "latency": round(bot.latency * 1000, 2) if bot.is_ready() else 0,
-            "uptime": "24/7",
-            "servers": [
-                {
-                    "name": guild.name,
-                    "members": guild.member_count,
-                    "channels": len(guild.channels)
-                } for guild in bot.guilds[:10]  # Primeros 10 servidores
-            ] if bot.is_ready() else []
-        }
-
+        
         return render_template_string(dashboard_html, 
                                     total_conversations=global_stats['total_conversations'],
                                     total_users=global_stats['total_users'],
                                     total_servers=global_stats['total_servers'],
-                                    bot_status="Online" if bot.is_ready() else "Connecting",
-                                    **bot_info)
+                                    bot_status="🟢 Online" if bot.is_ready() else "🟡 Connecting")
     except Exception as e:
         logger.error(f"Error in dashboard: {e}")
-        return jsonify({"error": "Dashboard error", "details": str(e)}), 500
+        return jsonify({"error": "Failed to load dashboard"}), 500
 
 @app.route('/api/conversations/<user_id>')
 def get_user_conversations(user_id):
     """API para obtener conversaciones de un usuario"""
     if not db:
         return jsonify({"error": "Database not available"}), 503
-
+    
     try:
         conversations = db.get_user_history(user_id, 50)  # Últimas 50
         return jsonify({
@@ -231,9 +217,9 @@ if __name__ == '__main__':
     # Start bot in a separate thread
     bot_thread = threading.Thread(target=run_bot, daemon=True)
     bot_thread.start()
-
+    
     # Give the bot a moment to start
     time.sleep(2)
-
+    
     # Start web server in main thread
     run_web_server()
