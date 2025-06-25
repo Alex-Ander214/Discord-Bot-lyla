@@ -8,9 +8,18 @@ import google.generativeai as genai
 from discord.ext import commands
 from discord import Embed, app_commands
 from gasmii import text_model, image_model
+from database import BotDatabase
 from dotenv import load_dotenv
 
-message_history = {}
+# Inicializar base de datos
+try:
+    db = BotDatabase()
+    print("✅ Conexión a MongoDB establecida")
+except Exception as e:
+    print(f"❌ Error conectando a MongoDB: {e}")
+    db = None
+
+message_history = {}  # Mantenemos caché en memoria para rapidez
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="/", intents=intents, heartbeat_timeout=60)
 load_dotenv()
@@ -63,8 +72,21 @@ async def on_ready():
 @bot.hybrid_command(name="reset", description="Borra el historial de mensajes del bot")
 async def reset(ctx):
     global message_history
-    message_history = {}
-    await ctx.send("🤖 El historial de mensajes del bot ha sido borrado.")
+    user_id = ctx.author.id
+    
+    # Limpiar caché local
+    if user_id in message_history:
+        del message_history[user_id]
+    
+    # Limpiar base de datos
+    if db:
+        try:
+            result = db.clear_user_history(user_id)
+            await ctx.send(f"🤖 Historial borrado: {result.deleted_count} conversaciones eliminadas.")
+        except Exception as e:
+            await ctx.send(f"⚠️ Error al borrar historial: {e}")
+    else:
+        await ctx.send("🤖 El historial de mensajes del bot ha sido borrado (solo caché local).")
 
 @bot.hybrid_command(name="info", description="Información sobre el bot")
 async def info(ctx):
@@ -76,6 +98,38 @@ async def info(ctx):
     embed.add_field(name="🆘 Soporte", value="[Servidor de soporte](https://www.discord.gg/gkn2hxfTc7)", inline=False)
     embed.set_footer(text="Desarrollado por Alex")
     await ctx.send(embed=embed)
+
+@bot.hybrid_command(name="stats", description="Estadísticas del bot y usuario")
+async def stats(ctx):
+    if not db:
+        await ctx.send("❌ Base de datos no disponible")
+        return
+    
+    try:
+        global_stats = db.get_global_stats()
+        user_stats = db.get_user_stats(ctx.author.id)
+        
+        embed = Embed(title="📊 Estadísticas", color=0x00ff00)
+        embed.add_field(name="🌍 Global", 
+                       value=f"Conversaciones: {global_stats['total_conversations']}\n"
+                             f"Usuarios: {global_stats['total_users']}\n"
+                             f"Servidores: {global_stats['total_servers']}", 
+                       inline=True)
+        embed.add_field(name="👤 Tu actividad", 
+                       value=f"Mensajes: {user_stats['message_count']}\n"
+                             f"Última actividad: {user_stats['last_active'].strftime('%d/%m/%Y') if user_stats['last_active'] else 'N/A'}", 
+                       inline=True)
+        
+        if ctx.guild:
+            server_stats = db.get_server_stats(ctx.guild.id)
+            embed.add_field(name="🏠 Este servidor", 
+                           value=f"Mensajes: {server_stats['server_messages']}\n"
+                                 f"Usuarios activos: {server_stats['active_users']}", 
+                           inline=True)
+        
+        await ctx.send(embed=embed)
+    except Exception as e:
+        await ctx.send(f"❌ Error obteniendo estadísticas: {e}")
 
     
 def create_chatbot_channels_file():
@@ -168,18 +222,47 @@ async def on_message(message):
                     return
                 await message.add_reaction('💬')
 
+                # Actualizar estadísticas
+                if db:
+                    db.update_user_stats(message.author.id, message.guild.id if message.guild else None)
+                    if message.guild:
+                        db.update_server_stats(message.guild.id)
+                
                 #Check if history is disabled just send response
                 if(MAX_HISTORY == 0):
                     response_text = await generate_response_with_text(cleaned_text)
-                    #add AI response to history
+                    # Guardar en DB sin historial
+                    if db:
+                        try:
+                            db.save_message(message.author.id, cleaned_text, response_text, message.guild.id if message.guild else None)
+                        except Exception as e:
+                            print(f"Error guardando en DB: {e}")
                     await split_and_send_messages(message, response_text, 1700)
                     return;
-                #Add users question to history
-                update_message_history(message.author.id,cleaned_text)
-                response_text = await generate_response_with_text(get_formatted_message_history(message.author.id))
-                #add AI response to history
-                update_message_history(message.author.id,response_text)
-                #Split the Message so discord does not get upset
+                
+                # Obtener historial (primero de DB, luego caché)
+                if db:
+                    try:
+                        formatted_history = db.get_formatted_history(message.author.id, MAX_HISTORY)
+                        if formatted_history:
+                            response_text = await generate_response_with_text(formatted_history + "\n\n" + cleaned_text)
+                        else:
+                            response_text = await generate_response_with_text(cleaned_text)
+                        
+                        # Guardar conversación en DB
+                        db.save_message(message.author.id, cleaned_text, response_text, message.guild.id if message.guild else None)
+                    except Exception as e:
+                        print(f"Error con MongoDB, usando caché local: {e}")
+                        # Fallback al sistema anterior
+                        update_message_history(message.author.id, cleaned_text)
+                        response_text = await generate_response_with_text(get_formatted_message_history(message.author.id))
+                        update_message_history(message.author.id, response_text)
+                else:
+                    # Sistema anterior como fallback
+                    update_message_history(message.author.id, cleaned_text)
+                    response_text = await generate_response_with_text(get_formatted_message_history(message.author.id))
+                    update_message_history(message.author.id, response_text)
+                
                 await split_and_send_messages(message, response_text, 1700)
 
 
