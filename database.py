@@ -12,8 +12,15 @@ class BotDatabase:
         if not self.mongodb_uri:
             raise ValueError("MONGODB_URI no está configurada en las variables de entorno")
         
-        self.client = pymongo.MongoClient(self.mongodb_uri)
-        self.db = self.client.lyla_bot
+        try:
+            self.client = pymongo.MongoClient(self.mongodb_uri)
+            # Probar la conexión
+            self.client.admin.command('ping')
+            self.db = self.client.lyla_bot
+            print("✅ Conexión a MongoDB exitosa")
+        except Exception as e:
+            print(f"❌ Error conectando a MongoDB: {e}")
+            raise
         
         # Colecciones
         self.conversations = self.db.conversations
