@@ -11,6 +11,10 @@ class BotDatabase:
             print("⚠️ MONGODB_URI no configurada, usando modo local")
             self.client = None
             self.db = None
+            self.conversations = None
+            self.users = None
+            self.servers = None
+            self.stats = None
             return
         
         try:
@@ -18,6 +22,13 @@ class BotDatabase:
             # Probar la conexión
             self.client.admin.command('ping')
             self.db = self.client.lyla_bot
+            
+            # Colecciones
+            self.conversations = self.db.conversations
+            self.users = self.db.users
+            self.servers = self.db.servers
+            self.stats = self.db.stats
+            
             print("✅ Conexión a MongoDB exitosa")
             # Crear índices para mejor rendimiento
             self.conversations.create_index([("user_id", 1), ("timestamp", -1)])
@@ -27,13 +38,10 @@ class BotDatabase:
             print(f"❌ Error conectando a MongoDB: {e}")
             self.client = None
             self.db = None
-            return
-        
-        # Colecciones
-        self.conversations = self.db.conversations
-        self.users = self.db.users
-        self.servers = self.db.servers
-        self.stats = self.db.stats
+            self.conversations = None
+            self.users = None
+            self.servers = None
+            self.stats = None
         
     def save_message(self, user_id, message, response, guild_id=None):
         """Guardar conversación en la base de datos"""
