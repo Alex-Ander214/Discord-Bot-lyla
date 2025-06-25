@@ -401,11 +401,3 @@ if __name__ == "__main__":
         bot.run(DISCORD_BOT_TOKEN)
     except Exception as e:
         print(f"Error ejecutando el bot: {e}")
-def clean_discord_message(message_content):
-    """Clean Discord message content"""
-    # Remove mentions, channels, and other Discord-specific formatting
-    import re
-    cleaned = re.sub(r'<@[!&]?(\d+)>', '', message_content)
-    cleaned = re.sub(r'<#(\d+)>', '', cleaned)
-    cleaned = re.sub(r'<:\w+:(\d+)>', '', cleaned)
-    return cleaned.strip()
