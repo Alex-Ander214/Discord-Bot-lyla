@@ -340,58 +340,6 @@ def clean_discord_message(input_string):
 
 
 
-# Cargar extensiones (cogs)
-async def load_extensions():
-    try:
-        await bot.load_extension("moderation")
-        await bot.load_extension("entertainment")
-        print("✅ Extensiones cargadas correctamente")
-    except Exception as e:
-        print(f"❌ Error cargando extensiones: {e}")
-
-@bot.event
-async def setup_hook():
-    await load_extensions()
-
-# Comando de información extendida
-@bot.hybrid_command(name="serverinfo", description="Información del servidor")
-async def server_info(ctx):
-    if not ctx.guild:
-        await ctx.send("❌ Este comando solo funciona en servidores.")
-        return
-    
-    guild = ctx.guild
-    embed = Embed(title=f"📋 Información de {guild.name}", color=0x7289da)
-    embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
-    
-    embed.add_field(name="👑 Propietario", value=guild.owner.mention if guild.owner else "Desconocido", inline=True)
-    embed.add_field(name="👥 Miembros", value=guild.member_count, inline=True)
-    embed.add_field(name="💬 Canales", value=len(guild.channels), inline=True)
-    embed.add_field(name="🎭 Roles", value=len(guild.roles), inline=True)
-    embed.add_field(name="📅 Creado", value=guild.created_at.strftime("%d/%m/%Y"), inline=True)
-    embed.add_field(name="🆔 ID", value=guild.id, inline=True)
-    
-    await ctx.send(embed=embed)
-
-@bot.hybrid_command(name="userinfo", description="Información de un usuario")
-async def user_info(ctx, member: discord.Member = None):
-    if member is None:
-        member = ctx.author
-    
-    embed = Embed(title=f"👤 Información de {member.display_name}", color=member.color)
-    embed.set_thumbnail(url=member.avatar.url if member.avatar else member.default_avatar.url)
-    
-    embed.add_field(name="🏷️ Nombre completo", value=str(member), inline=True)
-    embed.add_field(name="🆔 ID", value=member.id, inline=True)
-    embed.add_field(name="📅 Cuenta creada", value=member.created_at.strftime("%d/%m/%Y"), inline=True)
-    
-    if ctx.guild and member in ctx.guild.members:
-        embed.add_field(name="📥 Se unió al servidor", value=member.joined_at.strftime("%d/%m/%Y"), inline=True)
-        embed.add_field(name="🎭 Roles", value=f"{len(member.roles)-1} roles", inline=True)
-        embed.add_field(name="🔝 Rol más alto", value=member.top_role.mention, inline=True)
-    
-    await ctx.send(embed=embed)
-
 #---------------------------------------------Run Bot-------------------------------------------------
 # Solo ejecutar el bot si este archivo es ejecutado directamente
 if __name__ == "__main__":

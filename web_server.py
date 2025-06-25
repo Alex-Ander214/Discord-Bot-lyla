@@ -81,88 +81,38 @@ def dashboard():
         <html>
         <head>
             <title>Lyla Bot Dashboard</title>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0d1117; color: #c9d1d9; line-height: 1.6; }
-                .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-                .header { text-align: center; margin-bottom: 40px; }
-                .header h1 { color: #58a6ff; font-size: 2.5em; margin-bottom: 10px; }
-                .header p { color: #8b949e; font-size: 1.2em; }
-                .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin-bottom: 40px; }
-                .stat-card { background: linear-gradient(145deg, #161b22, #21262d); padding: 25px; border-radius: 12px; border: 1px solid #30363d; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s; }
-                .stat-card:hover { transform: translateY(-2px); }
-                .stat-icon { font-size: 2.5em; margin-bottom: 15px; }
-                .stat-number { font-size: 2.2em; font-weight: bold; color: #58a6ff; margin-bottom: 5px; }
-                .stat-label { color: #8b949e; font-size: 1.1em; font-weight: 500; }
-                .server-list { background: #161b22; padding: 25px; border-radius: 12px; border: 1px solid #30363d; margin-top: 20px; }
-                .server-item { background: #21262d; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #58a6ff; }
-                .server-name { font-weight: bold; color: #f0f6fc; margin-bottom: 5px; }
-                .server-stats { color: #8b949e; font-size: 0.9em; }
-                .refresh-btn { background: #238636; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-top: 20px; }
-                .refresh-btn:hover { background: #2ea043; }
-                .status-online { color: #3fb950; }
-                .status-offline { color: #f85149; }
+                body { font-family: Arial, sans-serif; margin: 20px; background: #2c2f33; color: white; }
+                .container { max-width: 1200px; margin: 0 auto; }
+                .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+                .stat-card { background: #36393f; padding: 20px; border-radius: 10px; border-left: 4px solid #7289da; }
+                .stat-number { font-size: 2em; font-weight: bold; color: #7289da; }
+                h1 { color: #7289da; text-align: center; }
+                h2 { color: #99aab5; }
             </style>
         </head>
         <body>
             <div class="container">
-                <div class="header">
-                    <h1>🤖 Lyla Bot Dashboard</h1>
-                    <p>Panel de control y estadísticas en tiempo real</p>
-                </div>
-                
+                <h1>🤖 Lyla Bot Dashboard</h1>
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-icon">💬</div>
+                        <h2>💬 Total Conversaciones</h2>
                         <div class="stat-number">{{ total_conversations }}</div>
-                        <div class="stat-label">Total Conversaciones</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon">👥</div>
+                        <h2>👥 Usuarios Únicos</h2>
                         <div class="stat-number">{{ total_users }}</div>
-                        <div class="stat-label">Usuarios Únicos</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon">🏠</div>
+                        <h2>🏠 Servidores</h2>
                         <div class="stat-number">{{ total_servers }}</div>
-                        <div class="stat-label">Servidores Conectados</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon">🟢</div>
-                        <div class="stat-number status-{{ 'online' if bot_online else 'offline' }}">{{ bot_status }}</div>
-                        <div class="stat-label">Estado del Bot</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">⚡</div>
-                        <div class="stat-number">{{ latency }}ms</div>
-                        <div class="stat-label">Latencia</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">📊</div>
-                        <div class="stat-number">{{ uptime }}</div>
-                        <div class="stat-label">Tiempo Activo</div>
+                        <h2>🟢 Estado del Bot</h2>
+                        <div class="stat-number">{{ bot_status }}</div>
                     </div>
                 </div>
-                
-                <div class="server-list">
-                    <h2 style="color: #f0f6fc; margin-bottom: 20px;">🌐 Servidores Activos</h2>
-                    {% for server in servers %}
-                    <div class="server-item">
-                        <div class="server-name">{{ server.name }}</div>
-                        <div class="server-stats">👥 {{ server.members }} miembros • 💬 {{ server.channels }} canales</div>
-                    </div>
-                    {% endfor %}
-                </div>
-                
-                <button class="refresh-btn" onclick="location.reload()">🔄 Actualizar Datos</button>
             </div>
-            
-            <script>
-                // Auto-refresh cada 30 segundos
-                setTimeout(() => location.reload(), 30000);
-            </script>
         </body>
         </html>
         """
